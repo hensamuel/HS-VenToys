@@ -1,0 +1,19 @@
+/* Estilos específicos para a preview e elementos interativos */
+#preview-container {
+  transition: background 0.3s;
+}
+#menu-element, #progress-element, [id^="label-"] {
+  cursor: move;
+  user-select: none;
+}
+#preview-container > .absolute {
+  touch-action: none;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
