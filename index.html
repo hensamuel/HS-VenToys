@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HS VenToys - Ventoy Theme Builder</title>
+  <meta name="description" content="Crie temas visuais para o Ventoy de forma fácil, sem editar arquivos manualmente.">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"></script>
+  <!-- interact.js -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <!-- JSZip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- FileSaver.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-900 text-white font-sans antialiased" x-data="themeBuilder" x-init="init">
+
+  <!-- Header -->
+  <header class="bg-gray-800 border-b border-gray-700 shadow-lg sticky top-0 z-50">
+    <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <svg class="h-8 w-8 text-indigo-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <h1 class="text-xl font-bold">HS <span class="text-indigo-500">VenToys</span></h1>
+        <span class="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">v1.0.0</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <input type="text" x-model="theme.name" class="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm w-48 focus:outline-none focus:border-indigo-500" placeholder="Nome do tema">
+        <button @click="undo" :disabled="historyIndex <= 0" class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-3 py-1 rounded text-sm" title="Desfazer">↩</button>
+        <button @click="redo" :disabled="historyIndex >= history.length - 1" class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-3 py-1 rounded text-sm" title="Refazer">↪</button>
+        <div class="h-6 w-px bg-gray-600"></div>
+        <button @click="newProject" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm">Novo</button>
+        <button @click="saveProject" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm">Salvar</button>
+        <button @click="loadProject" class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-sm">Carregar</button>
+        <button @click="openTemplates" class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm">Templates</button>
+        <div class="h-6 w-px bg-gray-600"></div>
+        <button @click="exportZip" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-1 rounded text-sm flex items-center font-medium">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Exportar ZIP
+        </button>
+        <button @click="exportVentoyJson" class="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded text-sm flex items-center">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          ventoy.json
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Corpo principal -->
+  <div class="flex" style="height: calc(100vh - 64px);">
+    
+    <!-- Sidebar Esquerda -->
+    <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+      <!-- Abas -->
+      <div class="flex m-3 bg-gray-900 rounded-lg p-1">
+        <button @click="activeTab = 'elements'" :class="activeTab === 'elements' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'" class="flex-1 py-1 text-xs rounded-md transition">Elementos</button>
+        <button @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'" class="flex-1 py-1 text-xs rounded-md transition">Tela</button>
+        <button @click="activeTab = 'icons'" :class="activeTab === 'icons' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'" class="flex-1 py-1 text-xs rounded-md transition">Ícones</button>
+      </div>
+      <!-- Conteúdo das abas com scroll -->
+      <div class="flex-1 overflow-y-auto px-4 pb-4">
+        
+        <!-- Aba Elementos -->
+        <div x-show="activeTab === 'elements'" class="space-y-3">
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Adicionar</h3>
+          <button @click="addLabel" class="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-left text-sm">📝 Adicionar Rótulo</button>
+          <button @click="theme.progressBar.enabled = true" x-show="!theme.progressBar.enabled" class="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-left text-sm">⏳ Adicionar Barra de Progresso</button>
+          <button @click="theme.progressBar.enabled = false" x-show="theme.progressBar.enabled" class="w-full bg-red-900 hover:bg-red-800 p-2 rounded text-left text-sm">🗑️ Remover Barra</button>
+          <button @click="theme.menu.visible = !theme.menu.visible" class="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-left text-sm">📋 <span x-text="theme.menu.visible ? 'Esconder Menu' : 'Mostrar Menu'"></span></button>
+          
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mt-4 pt-4 border-t border-gray-700">Camadas</h3>
+          <div class="space-y-1">
+            <div @click="selectElement('menu')" :class="{'bg-indigo-900 border-indigo-500': selectedElement === 'menu', 'border-transparent': selectedElement !== 'menu'}" class="border p-2 rounded cursor-pointer hover:bg-gray-700 text-sm">📋 Menu de Boot</div>
+            <template x-if="theme.progressBar.enabled">
+              <div @click="selectElement('progress')" :class="{'bg-indigo-900 border-indigo-500': selectedElement === 'progress', 'border-transparent': selectedElement !== 'progress'}" class="border p-2 rounded cursor-pointer hover:bg-gray-700 text-sm">⏳ Barra de Progresso</div>
+            </template>
+            <template x-for="label in theme.labels" :key="label.id">
+              <div @click="selectElement('label', label.id)" :class="{'bg-indigo-900 border-indigo-500': selectedElement === 'label-' + label.id, 'border-transparent': selectedElement !== 'label-' + label.id}" class="border p-2 rounded cursor-pointer hover:bg-gray-700 text-sm flex justify-between items-center">
+                <span>📝 <span x-text="label.text"></span></span>
+                <button @click.stop="removeLabel(label.id)" class="text-red-500 hover:text-red-400 text-xs">✕</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Aba Tela (configurações globais) -->
+        <div x-show="activeTab === 'settings'" class="space-y-4">
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Resolução</h3>
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" x-model="theme.resolution.auto" id="autoRes" class="rounded">
+            <label for="autoRes" class="text-sm">Automática (usar resolução do monitor)</label>
+          </div>
+          <div x-show="!theme.resolution.auto" class="flex space-x-2">
+            <input type="number" x-model="theme.resolution.width" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="1920">
+            <span class="self-center">×</span>
+            <input type="number" x-model="theme.resolution.height" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="1080">
+          </div>
+
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider pt-2">Fundo</h3>
+          <div class="space-y-2">
+            <input type="file" @change="handleBgUpload" accept="image/*" class="w-full text-sm bg-gray-700 rounded p-1">
+            <select x-model="theme.background.mode" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
+              <option value="stretch">Esticar (stretch)</option>
+              <option value="aspect">Manter proporção (aspect)</option>
+              <option value="center">Centralizar (center)</option>
+            </select>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm">Cor sólida:</span>
+              <input type="color" x-model="theme.background.color" class="w-10 h-6 rounded cursor-pointer">
+              <input type="text" x-model="theme.background.color" class="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs uppercase">
+            </div>
+          </div>
+
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider pt-2">Fonte</h3>
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" x-model="theme.font.custom" id="customFont" class="rounded">
+            <label for="customFont" class="text-sm">Fonte personalizada (.pf2)</label>
+          </div>
+          <div x-show="theme.font.custom" class="space-y-1">
+            <input type="file" @change="handleFontUpload" accept=".pf2" class="w-full text-sm bg-gray-700 rounded p-1">
+            <p class="text-xs text-gray-400">Arquivo: <span x-text="theme.font.filename || 'nenhum'"></span></p>
+          </div>
+
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider pt-2">Timeout</h3>
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" x-model="theme.timeout.enabled" id="timeoutCheck" class="rounded">
+            <label for="timeoutCheck" class="text-sm">Exibir mensagem de timeout</label>
+          </div>
+          <div x-show="theme.timeout.enabled" class="space-y-2">
+            <input type="text" x-model="theme.timeout.text" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="Inicializando em %d segundos...">
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <label>Cor do texto</label>
+              <input type="color" x-model="theme.timeout.color" class="w-full h-6 rounded">
+              <label>Posição X (%)</label>
+              <input type="number" x-model="theme.timeout.left" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+              <label>Posição Y (%)</label>
+              <input type="number" x-model="theme.timeout.top" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba Ícones -->
+        <div x-show="activeTab === 'icons'" class="space-y-3">
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Ícones do Menu</h3>
+          <button @click="addIcon" class="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-left text-sm">➕ Adicionar Ícone</button>
+          <template x-for="(icon, index) in theme.icons" :key="index">
+            <div class="bg-gray-700 p-2 rounded space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-medium">Ícone #<span x-text="index+1"></span></span>
+                <button @click="removeIcon(index)" class="text-red-500 hover:text-red-400 text-xs">✕</button>
+              </div>
+              <input type="text" x-model="icon.class" class="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-xs" placeholder="Classe (ex: ubuntu)">
+              <input type="file" @change="handleIconUpload(index, $event)" accept="image/*" class="w-full text-xs bg-gray-600 rounded p-1">
+              <p class="text-xs text-gray-400" x-text="icon.name || 'Nenhum arquivo'"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Área Central: Preview -->
+    <main class="flex-1 bg-gray-950 flex items-center justify-center p-4 overflow-auto" id="preview-area">
+      <div class="relative border-4 border-gray-600 shadow-2xl" 
+           :style="{ width: scaledWidth + 'px', height: scaledHeight + 'px', background: previewBg }"
+           id="preview-container">
+        
+        <!-- Menu de Boot -->
+        <div x-show="theme.menu.visible" class="absolute" 
+             :style="{ left: theme.menu.left + '%', top: theme.menu.top + '%', width: theme.menu.width + '%', height: theme.menu.height + '%' }"
+             id="menu-element"
+             @mousedown="selectElement('menu')">
+          <div class="bg-black bg-opacity-50 p-2 rounded" :style="{ color: theme.menu.selected_item_color }">
+            <div class="text-sm font-bold mb-1" x-text="theme.name || 'Ventoy'"></div>
+            <div class="text-sm" :style="{ color: theme.menu.selected_item_color, marginBottom: theme.menu.item_spacing + 'px' }">➤ Item selecionado</div>
+            <div class="text-sm" :style="{ color: theme.menu.item_color, marginBottom: theme.menu.item_spacing + 'px' }">  Item normal</div>
+            <div class="text-sm" :style="{ color: theme.menu.item_color }">  Outro item</div>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso -->
+        <div x-show="theme.progressBar.enabled" class="absolute" 
+             :style="{ left: theme.progressBar.left + '%', top: theme.progressBar.top + '%', width: theme.progressBar.width + '%', height: theme.progressBar.height + 'px' }"
+             id="progress-element"
+             @mousedown="selectElement('progress')">
+          <div class="h-full w-full" :style="{ background: theme.progressBar.bg_color, border: '1px solid ' + theme.progressBar.border_color }">
+            <div class="h-full" :style="{ width: '40%', background: theme.progressBar.fg_color }"></div>
+          </div>
+        </div>
+
+        <!-- Labels -->
+        <template x-for="label in theme.labels" :key="label.id">
+          <div class="absolute cursor-move select-none" 
+               :style="{ left: label.left + '%', top: label.top + '%', color: label.color, fontSize: label.size + 'px', textAlign: label.align }"
+               :id="'label-' + label.id"
+               @mousedown="selectElement('label', label.id)"
+               x-text="label.text"></div>
+        </template>
+
+        <!-- Timeout -->
+        <div x-show="theme.timeout.enabled" class="absolute"
+             :style="{ left: theme.timeout.left + '%', top: theme.timeout.top + '%', color: theme.timeout.color }"
+             x-text="theme.timeout.text.replace('%d', '10')"></div>
+      </div>
+    </main>
+
+    <!-- Painel Direito: Propriedades -->
+    <aside class="w-80 bg-gray-800 border-l border-gray-700 p-4 overflow-y-auto">
+      <h2 class="text-lg font-semibold mb-4 text-gray-300">Propriedades</h2>
+      <p x-show="!selectedElement" class="text-sm text-gray-500">Selecione um elemento na preview.</p>
+
+      <!-- Propriedades do Menu -->
+      <div x-show="selectedElement === 'menu'" class="space-y-3">
+        <h3 class="font-medium text-sm text-indigo-400">Menu de Boot</h3>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <label>Esquerda (%)</label>
+          <input type="number" x-model="theme.menu.left" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Topo (%)</label>
+          <input type="number" x-model="theme.menu.top" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Largura (%)</label>
+          <input type="number" x-model="theme.menu.width" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Altura (%)</label>
+          <input type="number" x-model="theme.menu.height" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Cor item</label>
+          <input type="color" x-model="theme.menu.item_color" class="w-full h-6 rounded">
+          <label>Cor seleção</label>
+          <input type="color" x-model="theme.menu.selected_item_color" class="w-full h-6 rounded">
+          <label>Altura item (px)</label>
+          <input type="number" x-model="theme.menu.item_height" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Espaçamento (px)</label>
+          <input type="number" x-model="theme.menu.item_spacing" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Padding (px)</label>
+          <input type="number" x-model="theme.menu.item_padding" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Largura ícone</label>
+          <input type="number" x-model="theme.menu.icon_width" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Altura ícone</label>
+          <input type="number" x-model="theme.menu.icon_height" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Espaço ícone</label>
+          <input type="number" x-model="theme.menu.item_icon_space" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Scrollbar</label>
+          <select x-model="theme.menu.scrollbar" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+            <option :value="true">Sim</option>
+            <option :value="false">Não</option>
+          </select>
+          <label>Largura scrollbar</label>
+          <input type="number" x-model="theme.menu.scrollbar_width" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Modo circular</label>
+          <select x-model="theme.menu.circular" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+            <option :value="true">Sim</option>
+            <option :value="false">Não</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Propriedades da Barra de Progresso -->
+      <div x-show="selectedElement === 'progress'" class="space-y-3">
+        <h3 class="font-medium text-sm text-indigo-400">Barra de Progresso</h3>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <label>Esquerda (%)</label>
+          <input type="number" x-model="theme.progressBar.left" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Topo (%)</label>
+          <input type="number" x-model="theme.progressBar.top" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Largura (%)</label>
+          <input type="number" x-model="theme.progressBar.width" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Altura (px)</label>
+          <input type="number" x-model="theme.progressBar.height" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+          <label>Cor preench.</label>
+          <input type="color" x-model="theme.progressBar.fg_color" class="w-full h-6 rounded">
+          <label>Cor fundo</label>
+          <input type="color" x-model="theme.progressBar.bg_color" class="w-full h-6 rounded">
+          <label>Cor borda</label>
+          <input type="color" x-model="theme.progressBar.border_color" class="w-full h-6 rounded">
+          <label>Mostrar texto</label>
+          <input type="checkbox" x-model="theme.progressBar.show_text" class="rounded">
+          <template x-if="theme.progressBar.show_text">
+            <div class="col-span-2 space-y-1">
+              <label>Texto</label>
+              <input type="text" x-model="theme.progressBar.text" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1">
+              <label>Cor texto</label>
+              <input type="color" x-model="theme.progressBar.text_color" class="w-full h-6 rounded">
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Propriedades de Label -->
+      <div x-show="selectedElement && selectedElement.startsWith('label')" class="space-y-3">
+        <h3 class="font-medium text-sm text-indigo-400">Rótulo</h3>
+        <div class="grid grid-cols-2 gap-2 text-xs" x-data="{ lbl: selectedLabel }">
+          <template x-if="lbl">
+            <div class="col-span-2 grid grid-cols-2 gap-2">
+              <label>Texto</label>
+              <input type="text" x-model="lbl.text" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+              <label>Esquerda (%)</label>
+              <input type="number" x-model="lbl.left" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+              <label>Topo (%)</label>
+              <input type="number" x-model="lbl.top" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+              <label>Cor</label>
+              <input type="color" x-model="lbl.color" class="w-full h-6 rounded">
+              <label>Tamanho (px)</label>
+              <input type="number" x-model="lbl.size" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+              <label>Alinhamento</label>
+              <select x-model="lbl.align" class="bg-gray-700 border border-gray-600 rounded px-2 py-1">
+                <option value="left">Esquerda</option>
+                <option value="center">Centro</option>
+                <option value="right">Direita</option>
+              </select>
+            </div>
+          </template>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Modal de Templates -->
+  <div x-show="showTemplates" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" @click.self="showTemplates = false">
+    <div class="bg-gray-800 rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
+      <h3 class="text-lg font-semibold mb-4">Templates</h3>
+      <div class="space-y-2">
+        <button @click="loadTemplate('default')" class="w-full bg-gray-700 hover:bg-gray-600 p-3 rounded text-left">🌟 Padrão</button>
+        <button @click="loadTemplate('minimal')" class="w-full bg-gray-700 hover:bg-gray-600 p-3 rounded text-left">✨ Minimalista</button>
+        <button @click="loadTemplate('gamer')" class="w-full bg-gray-700 hover:bg-gray-600 p-3 rounded text-left">🎮 Gamer</button>
+      </div>
+      <button @click="showTemplates = false" class="mt-4 w-full bg-red-600 hover:bg-red-700 p-2 rounded">Fechar</button>
+    </div>
+  </div>
+
+  <script src="js/themeBuilder.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/export.js"></script>
+</body>
+</html>
