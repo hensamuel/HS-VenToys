@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <b>🇧🇷 Português</b> &nbsp;|&nbsp;
+  <b>🇧🇷 Português - BR</b> &nbsp;|&nbsp;
   <a href="#english">🇺🇸 English</a>
 </p>
 
@@ -56,7 +56,7 @@ Isso significa que você pode usar, modificar e distribuir livremente, mas **dev
 ---
 
 <a name="english"></a>
-## 🇺🇸 English
+## 🇺🇸 English 
 
 **HS VenToys** is an open-source project where I plan to provide a theme creation tool for [Ventoy](https://www.ventoy.net). In the future, I may also add some guides on how to use it.
 
