@@ -15,7 +15,7 @@
 
 ## 🇧🇷 Português
 
-**HS VenToys** é um projeto open-source onde disponibilizo uma ferramenta visual para criação de temas do [Ventoy](https://www.ventoy.net), sem precisar editar arquivos de configuração manualmente. No futuro, pretendo adicionar também guias de utilização do Ventoy e da própria ferramenta.
+**HS VenToys** é um projeto open-source onde pretendo disponibilizar uma ferramenta de criação de temas pro programa [Ventoy](https://www.ventoy.net), e talvez, no futuro adicione alguns guias de como utilizar o mesmo.
 
 ### ✨ Funcionalidades
 
@@ -58,7 +58,7 @@ Isso significa que você pode usar, modificar e distribuir livremente, mas **dev
 <a name="english"></a>
 ## 🇺🇸 English
 
-**HS VenToys** is an open-source project where I provide a visual theme creation tool for [Ventoy](https://www.ventoy.net), without manually editing configuration files. In the future, I also plan to add Ventoy usage guides and tool tutorials.
+**HS VenToys** is an open-source project where I plan to provide a theme creation tool for [Ventoy](https://www.ventoy.net). In the future, I may also add some guides on how to use it.
 
 ### ✨ Features
 
